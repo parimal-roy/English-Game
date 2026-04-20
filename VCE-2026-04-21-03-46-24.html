@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vocabulary Game Pro</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+/* CARD */
+.container {
+    background: white;
+    width: 95%;
+    max-width: 420px;
+    padding: 20px;
+    border-radius: 20px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+/* TOP BAR */
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+/* SELECT */
+select {
+    padding: 5px;
+    border-radius: 8px;
+}
+
+/* QUESTION */
+#question {
+    font-size: 20px;
+    margin: 15px 0;
+}
+
+/* OPTIONS */
+.option {
+    background: #f1f1f1;
+    margin: 8px 0;
+    padding: 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.option:hover {
+    background: #ddd;
+}
+
+/* ANIMATION */
+.correct {
+    background: #4CAF50 !important;
+    color: white;
+    animation: pop 0.3s;
+}
+
+.wrong {
+    background: #f44336 !important;
+    color: white;
+    animation: shake 0.3s;
+}
+
+@keyframes pop {
+    50% {transform: scale(1.1);}
+}
+
+@keyframes shake {
+    25% {transform: translateX(-5px);}
+    75% {transform: translateX(5px);}
+}
+
+/* BUTTON */
+button {
+    margin-top: 10px;
+    padding: 10px;
+    border: none;
+    border-radius: 10px;
+    background: #667eea;
+    color: white;
+    cursor: pointer;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h2>Vocabulary Game</h2>
+
+    <div class="top-bar">
+        <span id="score">Score: 0</span>
+        <span id="timer">Time: 10</span>
+    </div>
+
+    <!-- Controls -->
+    <div>
+        <select id="category">
+            <option value="all">All</option>
+            <option value="general">General</option>
+            <option value="education">Education</option>
+            <option value="nature">Nature</option>
+        </select>
+
+        <select id="difficulty">
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
+        </select>
+    </div>
+
+    <div id="question"></div>
+    <div id="options"></div>
+
+    <button onclick="nextQuestion()">Next</button>
+
+</div>
+
+<!-- SOUND -->
+<audio id="correctSound" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
+<audio id="wrongSound" src="https://www.soundjay.com/buttons/sounds/button-10.mp3"></audio>
+
+<script>
+
+// ===== DATA =====
+const words = [
+{en:"Apple", bn:"আপেল", cat:"nature", level:"easy"},
+{en:"Tree", bn:"গাছ", cat:"nature", level:"easy"},
+{en:"River", bn:"নদী", cat:"nature", level:"easy"},
+{en:"Teacher", bn:"শিক্ষক", cat:"education", level:"easy"},
+{en:"Student", bn:"ছাত্র", cat:"education", level:"easy"},
+{en:"Book", bn:"বই", cat:"education", level:"easy"},
+{en:"Knowledge", bn:"জ্ঞান", cat:"education", level:"medium"},
+{en:"Wisdom", bn:"প্রজ্ঞা", cat:"education", level:"hard"},
+{en:"Environment", bn:"পরিবেশ", cat:"nature", level:"medium"},
+{en:"Galaxy", bn:"গ্যালাক্সি", cat:"nature", level:"hard"},
+{en:"Food", bn:"খাবার", cat:"general", level:"easy"},
+{en:"Friend", bn:"বন্ধু", cat:"general", level:"easy"},
+{en:"Beautiful", bn:"সুন্দর", cat:"general", level:"medium"},
+{en:"Difficult", bn:"কঠিন", cat:"general", level:"medium"},
+{en:"Complicated", bn:"জটিল", cat:"general", level:"hard"},
+{en:"Sun", bn:"সূর্য", cat:"nature", level:"easy"},
+{en:"Moon", bn:"চাঁদ", cat:"nature", level:"easy"},
+{en:"Pen", bn:"কলম", cat:"education", level:"easy"},
+{en:"Research", bn:"গবেষণা", cat:"education", level:"medium"},
+{en:"Analysis", bn:"বিশ্লেষণ", cat:"education", level:"hard"}
+];
+
+let filteredWords = [];
+let current = 0;
+let score = 0;
+let timer;
+let timeLeft = 10;
+
+// FILTER
+function applyFilter(){
+    const cat = document.getElementById("category").value;
+    const level = document.getElementById("difficulty").value;
+
+    filteredWords = words.filter(w => 
+        (cat === "all" || w.cat === cat) &&
+        w.level === level
+    );
+
+    filteredWords.sort(() => Math.random() - 0.5);
+
+    current = 0;
+    score = 0;
+
+    loadQuestion();
+}
+
+// LOAD
+function loadQuestion(){
+
+    if(current >= filteredWords.length){
+        showResult();
+        return;
+    }
+
+    resetTimer();
+
+    const q = filteredWords[current];
+    const isEnglish = Math.random() > 0.5;
+
+    let questionText = isEnglish ? q.en : q.bn;
+    let correct = isEnglish ? q.bn : q.en;
+
+    document.getElementById("question").innerText = questionText;
+
+    let options = [correct];
+
+    while(options.length < 4){
+        let rand = filteredWords[Math.floor(Math.random()*filteredWords.length)];
+        let val = isEnglish ? rand.bn : rand.en;
+        if(!options.includes(val)){
+            options.push(val);
+        }
+    }
+
+    options.sort(() => Math.random() - 0.5);
+
+    const optDiv = document.getElementById("options");
+    optDiv.innerHTML = "";
+
+    options.forEach(opt => {
+        let btn = document.createElement("div");
+        btn.classList.add("option");
+        btn.innerText = opt;
+
+        btn.onclick = () => checkAnswer(btn, correct);
+
+        optDiv.appendChild(btn);
+    });
+}
+
+// CHECK
+function checkAnswer(el, correct){
+
+    const correctSound = document.getElementById("correctSound");
+    const wrongSound = document.getElementById("wrongSound");
+
+    document.querySelectorAll(".option").forEach(btn=>{
+        btn.onclick = null;
+        if(btn.innerText === correct){
+            btn.classList.add("correct");
+        }
+    });
+
+    if(el.innerText === correct){
+        score++;
+        correctSound.play();
+        el.classList.add("correct");
+    } else {
+        wrongSound.play();
+        el.classList.add("wrong");
+    }
+
+    document.getElementById("score").innerText = "Score: " + score;
+    clearInterval(timer);
+}
+
+// NEXT
+function nextQuestion(){
+    current++;
+    loadQuestion();
+}
+
+// TIMER
+function resetTimer(){
+    clearInterval(timer);
+    timeLeft = 10;
+
+    timer = setInterval(()=>{
+        timeLeft--;
+        document.getElementById("timer").innerText = "Time: " + timeLeft;
+
+        if(timeLeft <= 0){
+            clearInterval(timer);
+            nextQuestion();
+        }
+    },1000);
+}
+
+// RESULT
+function showResult(){
+    document.querySelector(".container").innerHTML = `
+        <h2>Game Over</h2>
+        <h3>Score: ${score}/${filteredWords.length}</h3>
+        <button onclick="location.reload()">Restart</button>
+    `;
+}
+
+// INIT
+applyFilter();
+
+</script>
+
+</body>
+</html>
